@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>416 扭蛋抓娃娃机</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes clawDrop {
+      0% { transform: translateY(-100px); }
+      50% { transform: translateY(0); }
+      100% { transform: translateY(-100px); }
+    }
+    @keyframes plushMove {
+      0% { transform: scale(1) translateY(0); opacity: 1; }
+      60% { transform: scale(1.05) translateY(-10px); }
+      80% { transform: scale(1) translateY(0); opacity: 1; }
+      100% { transform: scale(1.3) translateY(0); opacity: 0; }
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .animate-claw {
+      animation: clawDrop 1.8s ease-in-out;
+    }
+    .animate-plush {
+      animation: plushMove 1.2s cubic-bezier(0.4,0,0.2,1);
+    }
+    .animate-spin {
+      animation: spin 1.8s linear;
+    }
+  </style>
+</head>
+<body class="relative min-h-screen flex flex-col items-center justify-center py-10">
+  <!-- 背景图片和渐变遮罩 -->
+  <div class="absolute inset-0 w-full h-full -z-10">
+    <img src="image/cover.png" alt="背景" class="w-full h-full object-cover object-center fixed top-0 left-0 opacity-80 select-none pointer-events-none" style="z-index:-2;">
+    <div class="absolute inset-0 bg-gradient-to-b from-orange-100 to-pink-200 opacity-80" style="z-index:-1;"></div>
+  </div>
+
+  <h1 class="text-3xl font-bold text-pink-700 mb-6">✨ 416 扭蛋抓娃娃机 ✨</h1>
+
+  <!-- 抓娃娃动画区域 -->
+  <div class="relative w-[380px] h-[500px] bg-white rounded-xl shadow-inner flex items-center justify-center overflow-hidden" id="machineBox">
+    <!-- 爪子 -->
+    <div class="absolute top-0 left-1/2 -translate-x-1/2 z-10" id="claw">
+      <svg class="w-14 h-14 text-gray-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 2v6m0 0l3 4m-3-4l-3 4m3-4v12" />
+      </svg>
+    </div>
+
+    <!-- 娃娃卡片 -->
+    <div class="flex items-center justify-center transition-all duration-700" id="plush">
+      <img src="image/cover.png" alt="卡牌背面" class="w-64 h-96 rounded-xl shadow-2xl" id="plushImg">
+    </div>
+  </div>
+
+  <!-- 抽卡按钮 -->
+  <button onclick="drawCard()" class="mt-8 bg-pink-500 hover:bg-pink-600 text-white px-6 py-2 rounded-full shadow">点击抓娃娃</button>
+  <button onclick="openGallery()" class="mt-4 bg-orange-400 hover:bg-orange-500 text-white px-6 py-2 rounded-full shadow">浏览全部卡片</button>
+
+  <!-- Gallery 画廊模态窗口 -->
+  <div id="galleryModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-xl p-6 max-w-4xl w-full relative flex flex-col items-center">
+      <button onclick="closeGallery()" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-3xl font-bold z-20 bg-white bg-opacity-80 rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:bg-opacity-100 transition">&times;</button>
+      <h2 class="text-xl font-bold mb-4 text-pink-700 text-center">全部卡片</h2>
+      <div class="relative w-full flex items-center">
+        <button id="carouselPrev" class="absolute left-0 z-10 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full shadow-lg w-10 h-10 flex items-center justify-center text-2xl font-bold text-pink-500 transition">&#8592;</button>
+        <div class="relative w-full">
+          <div id="carouselTrack" class="flex overflow-x-auto gap-6 px-12 py-4 scroll-smooth w-full">
+            <!-- 卡片由JS动态生成 -->
+          </div>
+        </div>
+        <button id="carouselNext" class="absolute right-0 z-10 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full shadow-lg w-10 h-10 flex items-center justify-center text-2xl font-bold text-pink-500 transition">&#8594;</button>
+      </div>
+      <!-- 大图预览 -->
+      <div id="bigCardBox" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-60 hidden" onclick="closeBigCard(event)">
+        <div class="relative flex items-center">
+          <button id="bigCardPrev" class="absolute left-[-60px] top-1/2 -translate-y-1/2 text-4xl z-20 bg-white bg-opacity-80 rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-pink-100 transition" style="color:#ff3e8e;" onclick="event.stopPropagation(); switchBigCard(-1);">&#8592;</button>
+          <img id="bigCardImg" src="" class="w-96 h-auto rounded-xl shadow-2xl z-10">
+          <button id="bigCardNext" class="absolute right-[-60px] top-1/2 -translate-y-1/2 text-4xl z-20 bg-white bg-opacity-80 rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-pink-100 transition" style="color:#ff3e8e;" onclick="event.stopPropagation(); switchBigCard(1);">&#8594;</button>
+          <button onclick="closeBigCard(event)" class="absolute top-[-40px] right-[-40px] text-gray-700 text-4xl font-bold z-20 bg-white bg-opacity-80 rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-100 transition">&times;</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const totalCards = 14; // 只抽14张卡
+    const plush = document.getElementById("plush");
+    const plushImg = document.getElementById("plushImg");
+    const claw = document.getElementById("claw");
+    let currentBigCardIndex = 1; // 当前大图索引
+
+    function drawCard() {
+      // 先重置动画
+      plush.classList.remove("animate-plush");
+      claw.classList.remove("animate-claw");
+      plushImg.classList.remove("animate-spin");
+      void plush.offsetWidth;
+      void plushImg.offsetWidth;
+
+      // 1.8s旋转卡背（cover.png）
+      plushImg.src = "image/cover.png";
+      plushImg.classList.add("animate-spin");
+      claw.classList.add("animate-claw");
+
+      setTimeout(() => {
+        plushImg.classList.remove("animate-spin");
+        // 切换为抽中的卡面并放大消失动画
+        const index = Math.floor(Math.random() * totalCards) + 1;
+        plushImg.src = `image/card${index}.png`;
+        plush.classList.add("animate-plush");
+      }, 1800);
+    }
+    function openGallery() {
+      const track = document.getElementById('carouselTrack');
+      track.innerHTML = '';
+      for(let i=1; i<=14; i++) {
+        const img = document.createElement('img');
+        img.src = `image/card${i}.png`;
+        img.alt = `卡片${i}`;
+        img.className = "w-40 h-60 rounded-xl shadow-lg cursor-pointer transition-transform duration-300 ease-in-out hover:scale-110 hover:shadow-2xl hover:ring-4 hover:ring-pink-300";
+        img.onclick = () => showBigCard(i);
+        track.appendChild(img);
+      }
+      document.getElementById('galleryModal').classList.remove('hidden');
+    }
+    function closeGallery() {
+      document.getElementById('galleryModal').classList.add('hidden');
+      closeBigCard();
+      setTimeout(() => {
+        document.querySelector('button[onclick="drawCard()"]')?.focus();
+      }, 100);
+    }
+    function showBigCard(index) {
+      currentBigCardIndex = index;
+      updateBigCard();
+      document.getElementById('bigCardBox').classList.remove('hidden');
+      // 禁用 gallery 区域左右按钮
+      document.getElementById('carouselPrev').setAttribute('disabled', 'disabled');
+      document.getElementById('carouselNext').setAttribute('disabled', 'disabled');
+      document.getElementById('carouselPrev').classList.add('opacity-50', 'cursor-not-allowed');
+      document.getElementById('carouselNext').classList.add('opacity-50', 'cursor-not-allowed');
+    }
+    function updateBigCard() {
+      document.getElementById('bigCardImg').src = `image/card${currentBigCardIndex}.png`;
+      // 循环模式下，始终显示按钮
+      document.getElementById('bigCardPrev').style.visibility = 'visible';
+      document.getElementById('bigCardNext').style.visibility = 'visible';
+    }
+    function switchBigCard(delta) {
+      if (delta === -1) {
+        currentBigCardIndex = currentBigCardIndex === 1 ? 14 : currentBigCardIndex - 1;
+      } else if (delta === 1) {
+        currentBigCardIndex = currentBigCardIndex === 14 ? 1 : currentBigCardIndex + 1;
+      }
+      updateBigCard();
+    }
+    function closeBigCard(event) {
+      if (!event || event.target === event.currentTarget || event.target.tagName === 'BUTTON') {
+        document.getElementById('bigCardBox').classList.add('hidden');
+        // 恢复 gallery 区域左右按钮
+        document.getElementById('carouselPrev').removeAttribute('disabled');
+        document.getElementById('carouselNext').removeAttribute('disabled');
+        document.getElementById('carouselPrev').classList.remove('opacity-50', 'cursor-not-allowed');
+        document.getElementById('carouselNext').classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      const track = document.getElementById('carouselTrack');
+      document.getElementById('carouselPrev').onclick = () => {
+        // 无限循环滚动（可选：跳到最右）
+        if (track.scrollLeft <= 0) {
+          track.scrollLeft = track.scrollWidth;
+        } else {
+          track.scrollBy({ left: -260, behavior: 'smooth' });
+        }
+      };
+      document.getElementById('carouselNext').onclick = () => {
+        // 无限循环滚动（可选：跳到最左）
+        if (track.scrollLeft + track.offsetWidth >= track.scrollWidth - 1) {
+          track.scrollLeft = 0;
+        } else {
+          track.scrollBy({ left: 260, behavior: 'smooth' });
+        }
+      };
+    });
+    document.addEventListener('keydown', function(e) {
+      const bigBox = document.getElementById('bigCardBox');
+      if (!bigBox.classList.contains('hidden')) {
+        if (e.key === 'ArrowLeft') {
+          switchBigCard(-1);
+        } else if (e.key === 'ArrowRight') {
+          switchBigCard(1);
+        } else if (e.key === 'Escape') {
+          closeBigCard();
+        }
+      }
+    });
+  </script>
+</body>
+</html>
